@@ -1,7 +1,7 @@
 ﻿using eShop.AppHost;
 
 var builder = DistributedApplication.CreateBuilder(args);
-
+builder.AddDockerComposeEnvironment("env");
 builder.AddForwardedHeaders();
 
 var redis = builder.AddRedis("redis");
