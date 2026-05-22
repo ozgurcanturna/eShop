@@ -6,6 +6,7 @@ builder.AddForwardedHeaders();
 
 var redis = builder.AddRedis("redis");
 var rabbitMq = builder.AddRabbitMQ("eventbus")
+    .WithManagementPlugin()
     .WithLifetime(ContainerLifetime.Persistent);
 var postgres = builder.AddPostgres("postgres")
     .WithImage("ankane/pgvector")
@@ -87,6 +88,7 @@ bool useOllama = false;
 if (useOllama)
 {
     builder.AddOllama(catalogApi, webApp);
+    
 }
 
 // Wire up the callback urls (self referencing)
@@ -99,6 +101,41 @@ identityApi.WithEnvironment("BasketApiClient", basketApi.GetEndpoint("http"))
            .WithEnvironment("WebhooksApiClient", webHooksApi.GetEndpoint("http"))
            .WithEnvironment("WebhooksWebClient", webhooksClient.GetEndpoint(launchProfileName))
            .WithEnvironment("WebAppClient", webApp.GetEndpoint(launchProfileName));
+
+// Monitoring: Prometheus + Grafana
+var prometheusConfigPath = Path.Combine(builder.AppHostDirectory, "prometheus");
+var grafanaProvisioningPath = Path.Combine(builder.AppHostDirectory, "grafana", "provisioning");
+var grafanaDashboardsPath = Path.Combine(builder.AppHostDirectory, "grafana", "dashboards");
+
+// Prometheus lifecycle hook: start öncesi prometheus.yml dinamik olarak oluşturulur
+builder.AddPrometheusConfigHook(prometheusConfigPath, [
+    basketApi.GetEndpoint("http"),
+    catalogApi.GetEndpoint("http"),
+    orderingApi.GetEndpoint("http"),
+    identityApi.GetEndpoint(launchProfileName),
+    webHooksApi.GetEndpoint("http"),
+    webApp.GetEndpoint(launchProfileName),
+    rabbitMq.GetEndpoint("management"),
+]);
+
+var prometheus = builder.AddContainer("prometheus", "prom/prometheus", "latest")
+    .WithBindMount(prometheusConfigPath, "/etc/prometheus", isReadOnly: false)
+    .WithArgs(
+        "--config.file=/etc/prometheus/prometheus.yml",
+        "--storage.tsdb.path=/prometheus",
+        "--web.enable-lifecycle")
+    .WithHttpEndpoint(port: 9090, targetPort: 9090, name: "http")
+    .WithLifetime(ContainerLifetime.Persistent);
+
+builder.AddContainer("grafana", "grafana/grafana-oss", "latest")
+    .WithBindMount(grafanaProvisioningPath, "/etc/grafana/provisioning", isReadOnly: true)
+    .WithBindMount(grafanaDashboardsPath, "/var/lib/grafana/dashboards", isReadOnly: true)
+    .WithEnvironment("GF_AUTH_ANONYMOUS_ENABLED", "true")
+    .WithEnvironment("GF_AUTH_ANONYMOUS_ORG_ROLE", "Admin")
+    .WithEnvironment("GF_AUTH_DISABLE_LOGIN_FORM", "true")
+    .WithHttpEndpoint(port: 3000, targetPort: 3000, name: "http")
+    .WaitFor(prometheus)
+    .WithLifetime(ContainerLifetime.Persistent);
 
 builder.Build().Run();
 

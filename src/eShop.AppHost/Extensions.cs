@@ -2,6 +2,7 @@
 using Aspire.Hosting.Lifecycle;
 using Aspire.Hosting.Yarp;
 using Aspire.Hosting.Yarp.Transforms;
+using Microsoft.Extensions.DependencyInjection;
 using Yarp.ReverseProxy.Configuration;
 
 namespace eShop.AppHost;
@@ -247,5 +248,18 @@ internal static class Extensions
             yarp.AddRoute("/identity/{*any}", identityApi.GetEndpoint("http"))
                 .WithTransformPathRemovePrefix("/identity");
         });
+    }
+
+    /// <summary>
+    /// Prometheus başlamadan önce servis endpoint'lerinden prometheus.yml oluşturan lifecycle hook'u kaydeder.
+    /// </summary>
+    public static IDistributedApplicationBuilder AddPrometheusConfigHook(
+        this IDistributedApplicationBuilder builder,
+        string prometheusConfigDir,
+        EndpointReference[] endpoints)
+    {
+        builder.Services.AddSingleton<IDistributedApplicationEventingSubscriber>(
+            new PrometheusConfigLifecycleHook(prometheusConfigDir, endpoints));
+        return builder;
     }
 }

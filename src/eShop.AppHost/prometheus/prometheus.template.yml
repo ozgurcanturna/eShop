@@ -1,0 +1,52 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+
+  # ASP.NET Core Servisleri - /metrics endpoint'inden OpenTelemetry metrikleri
+  - job_name: 'basket-api'
+    static_configs:
+      - targets: ['${BASKET_API_HOST}:${BASKET_API_PORT}']
+    metrics_path: /metrics
+
+  - job_name: 'catalog-api'
+    static_configs:
+      - targets: ['${CATALOG_API_HOST}:${CATALOG_API_PORT}']
+    metrics_path: /metrics
+
+  - job_name: 'ordering-api'
+    static_configs:
+      - targets: ['${ORDERING_API_HOST}:${ORDERING_API_PORT}']
+    metrics_path: /metrics
+
+  - job_name: 'order-processor'
+    static_configs:
+      - targets: ['${ORDER_PROCESSOR_HOST}:${ORDER_PROCESSOR_PORT}']
+    metrics_path: /metrics
+
+  - job_name: 'payment-processor'
+    static_configs:
+      - targets: ['${PAYMENT_PROCESSOR_HOST}:${PAYMENT_PROCESSOR_PORT}']
+    metrics_path: /metrics
+
+  - job_name: 'identity-api'
+    static_configs:
+      - targets: ['${IDENTITY_API_HOST}:${IDENTITY_API_PORT}']
+    metrics_path: /metrics
+
+  - job_name: 'webhooks-api'
+    static_configs:
+      - targets: ['${WEBHOOKS_API_HOST}:${WEBHOOKS_API_PORT}']
+    metrics_path: /metrics
+
+  - job_name: 'webapp'
+    static_configs:
+      - targets: ['${WEBAPP_HOST}:${WEBAPP_PORT}']
+    metrics_path: /metrics
+
+  # RabbitMQ - Prometheus plugin endpoint'i
+  - job_name: 'rabbitmq'
+    static_configs:
+      - targets: ['${RABBITMQ_HOST}:15692']
+    metrics_path: /metrics

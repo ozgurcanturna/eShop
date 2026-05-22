@@ -23,12 +23,14 @@ services:
     networks:
       - "aspire"
   eventbus:
-    image: "docker.io/library/rabbitmq:4.2"
+    image: "docker.io/library/rabbitmq:4.2-management"
     environment:
       RABBITMQ_DEFAULT_USER: "guest"
       RABBITMQ_DEFAULT_PASS: "${EVENTBUS_PASSWORD}"
     expose:
       - "5672"
+      - "15672"
+      - "15692"
     networks:
       - "aspire"
   postgres:
